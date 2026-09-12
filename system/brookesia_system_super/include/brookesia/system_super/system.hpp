@@ -48,6 +48,14 @@ public:
     struct Config {
         /** Core system configuration forwarded to the base system implementation. */
         core::System::Config core_config;
+        /**
+         * @brief Optional root directory for packaged SuperOS resources.
+         *
+         * Defaults to the internal storage root to preserve the existing ESP
+         * layout. Hosts that separate read-only resources from writable storage
+         * can provide a different directory.
+         */
+        std::optional<std::string> resource_root_path;
     };
 
     /**
@@ -64,6 +72,14 @@ public:
      * @return Empty result on success, or an error string.
      */
     std::expected<void, std::string> init(Config config);
+
+    /**
+     * @brief Return the root directory containing packaged SuperOS resources.
+     *
+     * Falls back to the internal storage root when no explicit resource root was
+     * provided during initialization.
+     */
+    std::string get_resource_root_path() const;
 
 protected:
     core::SystemInfo on_get_system_info() const override;
@@ -135,6 +151,7 @@ private:
     bool stopping_ = false;
     bool shell_fonts_prepared_ = false;
     bool shell_themes_prepared_ = false;
+    std::string resource_root_path_;
 };
 
 } // namespace esp_brookesia::system::super

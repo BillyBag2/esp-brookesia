@@ -1156,6 +1156,20 @@ public:
     {
         ensure_storage_directories();
         info_list_ = {
+#if defined(__EMSCRIPTEN__)
+            // WASM hosts may preload packaged application resources beneath
+            // /brookesia. Register that directory so Storage service path
+            // validation permits SuperOS to read its shell assets. ESP storage
+            // layouts are unaffected. Emscripten's preload image is treated as
+            // application-provided content; callers must not write to it.
+            {
+                .fs_type = storage::FileSystemIface::FileSystemType::LittleFS,
+                .medium_type = storage::FileSystemIface::MediumType::Flash,
+                .mount_point = "/resources",
+                .root_path = std::string(WASM_STORAGE_ROOT),
+                .supports_directories = true,
+            },
+#endif
             {
                 .fs_type = storage::FileSystemIface::FileSystemType::SPIFFS,
                 .medium_type = storage::FileSystemIface::MediumType::Flash,

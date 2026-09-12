@@ -325,17 +325,32 @@ std::expected<void, std::string> System::init(Config config)
         return std::unexpected("Failed to bind system services");
     }
 
+    // TODO(WASM): Temporary startup probes for the browser port. Remove before
+    // upstreaming once the blocking initialization step is identified. These do
+    // not change the ESP execution path or System Core behavior.
+#if defined(__EMSCRIPTEN__)
+    BROOKESIA_LOGI("WASM startup probe: initializing storage layout");
+#endif
     auto storage_result = impl_->initialize_storage_layout();
     if (!storage_result) {
         return std::unexpected(storage_result.error());
     }
+#if defined(__EMSCRIPTEN__)
+    BROOKESIA_LOGI("WASM startup probe: loading GUI preferences");
+#endif
     impl_->load_gui_preferences();
 
+#if defined(__EMSCRIPTEN__)
+    BROOKESIA_LOGI("WASM startup probe: preparing startup overlay");
+#endif
     auto prepare_startup_overlay_result = on_prepare_startup_overlay();
     if (!prepare_startup_overlay_result) {
         return prepare_startup_overlay_result;
     }
 
+#if defined(__EMSCRIPTEN__)
+    BROOKESIA_LOGI("WASM startup probe: showing startup overlay");
+#endif
     auto startup_overlay_result = impl_->show_startup_overlay();
     if (!startup_overlay_result) {
         return startup_overlay_result;
@@ -346,6 +361,9 @@ std::expected<void, std::string> System::init(Config config)
 
     impl_->initialized_ = true;
 
+#if defined(__EMSCRIPTEN__)
+    BROOKESIA_LOGI("WASM startup probe: running system-specific initialization");
+#endif
     auto init_result = on_init();
     if (!init_result) {
         return init_result;
