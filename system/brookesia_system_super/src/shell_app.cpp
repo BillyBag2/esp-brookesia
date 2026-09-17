@@ -20,8 +20,7 @@ namespace {
 
 std::string make_system_resource_dir(const System &system)
 {
-    const auto layout = system.get_storage_layout();
-    return (std::filesystem::path(layout.internal.root_path) / "system" / "super").lexically_normal().generic_string();
+    return (std::filesystem::path(system.get_resource_root_path()) / "system" / "super").lexically_normal().generic_string();
 }
 
 } // namespace

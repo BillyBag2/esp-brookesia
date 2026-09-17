@@ -46,8 +46,17 @@ std::expected<void, std::string> System::init(Config config)
     );
     config.core_config.system_type = BROOKESIA_SYSTEM_SUPER_SYSTEM_TYPE;
     config.core_config.startup_overlay.enabled = BROOKESIA_SYSTEM_SUPER_ENABLE_STARTUP_OVERLAY;
-    config.core_config.startup_overlay.root_path =
+    const auto startup_resource_path =
         make_super_system_resource_path(BROOKESIA_SYSTEM_SUPER_STARTUP_ROOT_JSON);
+    if (config.resource_root_path.has_value() && !config.resource_root_path->empty()) {
+        // Packaged resources can live outside writable internal storage on hosts
+        // such as WASM. ESP keeps the existing relative path by default.
+        config.core_config.startup_overlay.root_path =
+            (std::filesystem::path(*config.resource_root_path) / "system" / startup_resource_path)
+            .lexically_normal().generic_string();
+    } else {
+        config.core_config.startup_overlay.root_path = startup_resource_path;
+    }
     config.core_config.startup_overlay.screen_path = "/startup";
     config.core_config.startup_overlay.target = {
         .display_id = {},
@@ -57,7 +66,20 @@ std::expected<void, std::string> System::init(Config config)
     if (!config.core_config.gui_backend) {
         return std::unexpected("Super system requires a GUI backend");
     }
-    return core::System::init(std::move(config.core_config));
+    resource_root_path_ = config.resource_root_path.value_or("");
+    auto result = core::System::init(std::move(config.core_config));
+    if (!result) {
+        resource_root_path_.clear();
+    }
+    return result;
+}
+
+std::string System::get_resource_root_path() const
+{
+    if (!resource_root_path_.empty()) {
+        return resource_root_path_;
+    }
+    return get_storage_layout().internal.root_path;
 }
 
 core::SystemInfo System::on_get_system_info() const

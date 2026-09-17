@@ -53,14 +53,12 @@ std::string get_current_language(core::AppContext *context)
 
 std::string make_system_resource_dir(const System &system)
 {
-    const auto layout = system.get_storage_layout();
-    return (std::filesystem::path(layout.internal.root_path) / "system" / "super").lexically_normal().generic_string();
+    return (std::filesystem::path(system.get_resource_root_path()) / "system" / "super").lexically_normal().generic_string();
 }
 
 std::string make_share_resource_dir(const System &system)
 {
-    const auto layout = system.get_storage_layout();
-    return (std::filesystem::path(layout.internal.root_path) / "system").lexically_normal().generic_string();
+    return (std::filesystem::path(system.get_resource_root_path()) / "system").lexically_normal().generic_string();
 }
 
 std::string make_app_display_name(const core::AppInfo &app, core::AppContext *context)
