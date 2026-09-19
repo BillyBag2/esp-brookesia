@@ -17,6 +17,7 @@
 #include "brookesia/lib_utils/describe_helpers.hpp"
 #include "brookesia/service_helper/network/sntp.hpp"
 #include "brookesia/service_helper/network/wifi.hpp"
+#include "brookesia/service_helper/system/device.hpp"
 #include "private/shell_app.hpp"
 #include "private/system_constants.hpp"
 #include "private/utils.hpp"
@@ -26,6 +27,7 @@ namespace {
 
 using SNTPHelper = service::helper::SNTP;
 using WifiHelper = service::helper::Wifi;
+using DeviceHelper = service::helper::Device;
 
 struct WifiStatusState {
     bool visible = false;
@@ -201,6 +203,92 @@ void ShellApp::set_status_wifi_state(bool visible, bool connected)
     auto result = context_->gui().set_binding_values(updates);
     if (!result) {
         BROOKESIA_LOGW("Failed to refresh Shell Wi-Fi status icon: %1%", result.error());
+    }
+}
+
+bool ShellApp::ensure_device_service_binding()
+{
+    if (device_service_binding_.is_valid()) {
+        return DeviceHelper::is_running();
+    }
+    if (!DeviceHelper::is_available()) {
+        set_status_battery_state(std::nullopt, std::nullopt);
+        return false;
+    }
+    device_service_binding_ = service::ServiceManager::get_instance().bind(DeviceHelper::get_name().data());
+    if (!device_service_binding_.is_valid() || !DeviceHelper::is_running()) {
+        device_service_binding_.release();
+        set_status_battery_state(std::nullopt, std::nullopt);
+        return false;
+    }
+    if (!battery_event_connection_.connected()) {
+        auto callback = [this](const std::string &, const boost::json::object &data) {
+            DeviceHelper::PowerBatteryState state;
+            if (!BROOKESIA_DESCRIBE_FROM_JSON(data, state)) {
+                BROOKESIA_LOGW("Failed to parse battery state for Shell status");
+                return;
+            }
+            set_status_battery_state(
+                state.is_present ? state.percentage : std::nullopt,
+                state.is_present ? state.current_ma : std::nullopt
+            );
+        };
+        battery_event_connection_ = DeviceHelper::subscribe_event(
+                                        DeviceHelper::EventId::PowerBatteryStateChanged, callback
+                                    );
+    }
+    return true;
+}
+
+void ShellApp::release_device_service_binding()
+{
+    battery_event_connection_.disconnect();
+    device_service_binding_.release();
+    set_status_battery_state(std::nullopt, std::nullopt);
+}
+
+void ShellApp::refresh_battery_status()
+{
+    if (!ensure_device_service_binding()) {
+        return;
+    }
+    auto result = DeviceHelper::call_function_sync<boost::json::object>(
+                      DeviceHelper::FunctionId::GetPowerBatteryState,
+                      service::helper::Timeout(500)
+                  );
+    DeviceHelper::PowerBatteryState state;
+    if (!result || !BROOKESIA_DESCRIBE_FROM_JSON(*result, state) || !state.is_present) {
+        set_status_battery_state(std::nullopt, std::nullopt);
+        return;
+    }
+    set_status_battery_state(state.percentage, state.current_ma);
+}
+
+void ShellApp::set_status_battery_state(
+    const std::optional<uint8_t> &percentage, const std::optional<int32_t> &current_ma
+)
+{
+    if (context_ == nullptr) {
+        return;
+    }
+    const auto text = percentage.has_value() ? std::to_string(*percentage) + "%" : "--";
+    std::vector<gui::BindingValueUpdate> updates;
+    updates.push_back({SUPER_STATUS_BATTERY_PATH, "battery_hidden", bool_to_binding(!percentage.has_value())});
+    const char *background = "${color.border.strong}";
+    const char *foreground = "${color.text.inverse}";
+    if (current_ma.value_or(0) > 5) {
+        background = "${color.success.fill}";
+        foreground = "${color.success.on}";
+    } else if (current_ma.value_or(0) < -5) {
+        background = "${color.danger.fill}";
+        foreground = "${color.danger.on}";
+    }
+    updates.push_back({SUPER_STATUS_BATTERY_PATH, "battery_background", background});
+    updates.push_back({std::string(SUPER_STATUS_BATTERY_PATH) + "/label", "battery_text", text});
+    updates.push_back({std::string(SUPER_STATUS_BATTERY_PATH) + "/label", "battery_foreground", foreground});
+    auto result = context_->gui().set_binding_values(updates);
+    if (!result) {
+        BROOKESIA_LOGW("Failed to refresh Shell battery status: %1%", result.error());
     }
 }
 

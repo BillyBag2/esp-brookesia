@@ -92,6 +92,8 @@ inline constexpr const char *SUPER_STATUS_BAR_PATH = BROOKESIA_SYSTEM_SUPER_PATH
 inline constexpr const char *SUPER_SYSTEM_UI_MASK_PATH = BROOKESIA_SYSTEM_SUPER_PATH_SYSTEM_UI_MASK;
 inline constexpr const char *SUPER_STATUS_WIFI_PATH = BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY_STATUS
         "/status_right/wifi_pill";
+inline constexpr const char *SUPER_STATUS_BATTERY_PATH = BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY_STATUS
+        "/status_right/battery_pill";
 inline constexpr const char *SUPER_STATUS_CLOCK_PATH = BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY_STATUS
         "/status_right/clock/label";
 inline constexpr const char *SUPER_GESTURE_INDICATOR_PATH =

@@ -16,6 +16,7 @@
 #include "boost/json/array.hpp"
 #include "brookesia/app_settings/macro_configs.h"
 #include "brookesia/lib_utils/signal.hpp"
+#include "brookesia/hal_interface/interfaces/power/battery.hpp"
 
 #include "brookesia/service_manager/service/base.hpp"
 #include "brookesia/system_core.hpp"
@@ -64,6 +65,11 @@ private:
         int brightness = 0;
         int volume = 0;
         bool muted = false;
+        bool battery_supported = false;
+        bool battery_charger_control_supported = false;
+        bool battery_charge_config_supported = false;
+        hal::power::BatteryIface::State battery_state;
+        hal::power::BatteryIface::ChargeConfig battery_charge_config;
     };
 
     struct WifiNetworkState {
@@ -134,11 +140,14 @@ private:
     void clear_hardware_groups(system::core::AppContext &context);
     std::expected<void, std::string> refresh_display_state(system::core::AppContext &context);
     std::expected<void, std::string> refresh_sound_state(system::core::AppContext &context);
+    std::expected<void, std::string> refresh_battery_state(system::core::AppContext &context);
     void subscribe_device_events();
     void disconnect_device_events();
     void handle_brightness_event(const gui::Event &event);
     void handle_volume_event(const gui::Event &event);
     void handle_mute_event(const gui::Event &event);
+    void handle_battery_charging_event(const gui::Event &event);
+    void handle_battery_rate_event(const gui::Event &event);
     void set_brightness(system::core::AppContext &context, int brightness);
     void set_volume(system::core::AppContext &context, int volume);
     void set_mute(system::core::AppContext &context, bool muted);

@@ -296,6 +296,7 @@ bool Device::is_power_battery_state_equal(const PowerBatteryState &lhs, const Po
            (lhs.charge_state == rhs.charge_state) &&
            (lhs.level_source == rhs.level_source) &&
            (lhs.voltage_mv == rhs.voltage_mv) &&
+           (lhs.current_ma == rhs.current_ma) &&
            (lhs.percentage == rhs.percentage) &&
            (lhs.vbus_voltage_mv == rhs.vbus_voltage_mv) &&
            (lhs.system_voltage_mv == rhs.system_voltage_mv) &&

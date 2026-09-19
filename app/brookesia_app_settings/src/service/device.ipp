@@ -102,6 +102,43 @@ std::expected<void, std::string> SettingsApp::refresh_device_state(system::core:
         }
     }
 
+    if (device_service_binding_.is_valid()) {
+        auto info_result = DeviceHelper::call_function_sync<boost::json::object>(
+                               DeviceHelper::FunctionId::GetPowerBatteryInfo,
+                               service::helper::Timeout(DEVICE_SERVICE_TIMEOUT_MS)
+                           );
+        DeviceHelper::PowerBatteryInfo info;
+        if (info_result && BROOKESIA_DESCRIBE_FROM_JSON(*info_result, info)) {
+            device_ui_state_.battery_supported = true;
+            device_ui_state_.battery_charger_control_supported =
+                info.has_ability(hal::power::BatteryIface::Ability::ChargerControl);
+            device_ui_state_.battery_charge_config_supported =
+                info.has_ability(hal::power::BatteryIface::Ability::ChargeConfig);
+        }
+        auto state_result = DeviceHelper::call_function_sync<boost::json::object>(
+                                DeviceHelper::FunctionId::GetPowerBatteryState,
+                                service::helper::Timeout(DEVICE_SERVICE_TIMEOUT_MS)
+                            );
+        if (state_result && BROOKESIA_DESCRIBE_FROM_JSON(*state_result, device_ui_state_.battery_state)) {
+            device_ui_state_.battery_supported = true;
+        }
+        // Probe the operation as well as inspecting the advertised abilities.
+        // This keeps the controls usable across component versions whose
+        // serialized Ability list may not yet know the newer charger values.
+        auto config_result = DeviceHelper::call_function_sync<boost::json::object>(
+                                 DeviceHelper::FunctionId::GetPowerBatteryChargeConfig,
+                                 service::helper::Timeout(DEVICE_SERVICE_TIMEOUT_MS)
+                             );
+        if (config_result &&
+                BROOKESIA_DESCRIBE_FROM_JSON(*config_result, device_ui_state_.battery_charge_config)) {
+            device_ui_state_.battery_supported = true;
+            device_ui_state_.battery_charge_config_supported = true;
+            device_ui_state_.battery_charger_control_supported = true;
+        } else if (!config_result) {
+            BROOKESIA_LOGW("Battery charge configuration is unavailable: %1%", config_result.error());
+        }
+    }
+
     auto result = refresh_my_device_state(context);
     if (!result) {
         return result;
@@ -111,6 +148,10 @@ std::expected<void, std::string> SettingsApp::refresh_device_state(system::core:
         return result;
     }
     result = refresh_sound_state(context);
+    if (!result) {
+        return result;
+    }
+    result = refresh_battery_state(context);
     if (!result) {
         return result;
     }
@@ -357,14 +398,66 @@ std::expected<void, std::string> SettingsApp::refresh_sound_state(system::core::
     return context.gui().set_binding_values(updates);
 }
 
+std::expected<void, std::string> SettingsApp::refresh_battery_state(system::core::AppContext &context)
+{
+    const auto &state = device_ui_state_.battery_state;
+    const bool available = device_ui_state_.battery_supported && state.is_present;
+    std::vector<gui::BindingValueUpdate> updates;
+    add_binding_update(updates, BATTERY_CARD_PATH, "commonProps.hidden", available ? "false" : "true");
+    add_binding_update(updates, BATTERY_LEVEL_PATH, "labelProps.text",
+                       available && state.percentage ? make_percent_text(*state.percentage) : "--");
+    add_binding_update(updates, HOME_BATTERY_VALUE_PATH, "labelProps.text",
+                       available && state.percentage ? make_percent_text(*state.percentage) :
+                       make_localized_unavailable_text(current_locale_));
+    add_binding_update(updates, BATTERY_VOLTAGE_PATH, "labelProps.text",
+                       available && state.voltage_mv ? std::to_string(*state.voltage_mv) + " mV" : "--");
+    add_binding_update(updates, BATTERY_CURRENT_PATH, "labelProps.text",
+                       available && state.current_ma ? std::to_string(*state.current_ma) + " mA" : "--");
+    add_control_state_updates(updates, BATTERY_CARD_PATH + std::string("/charging"),
+                              BATTERY_CHARGING_PATH, device_ui_state_.battery_charger_control_supported);
+    add_control_state_updates(updates, BATTERY_RATE_PATH, BATTERY_RATE_PATH,
+                              device_ui_state_.battery_charge_config_supported);
+    add_binding_update(updates, BATTERY_CHARGING_PATH, "checked",
+                       device_ui_state_.battery_charge_config.enabled ? "true" : "false");
+    add_binding_update(updates, BATTERY_RATE_PATH, "labelProps.text",
+                       device_ui_state_.battery_charge_config_supported ?
+                       std::to_string(device_ui_state_.battery_charge_config.charge_current_ma) + " mA" : "--");
+    return context.gui().set_binding_values(updates);
+}
+
 void SettingsApp::subscribe_device_events()
 {
     if (!SETTINGS_HARDWARE_OPERATIONS_ENABLED) {
         return;
     }
 
-    if (!device_ui_state_.display_service_ready && !device_ui_state_.audio_service_ready) {
+    if (!device_ui_state_.display_service_ready && !device_ui_state_.audio_service_ready &&
+            !device_ui_state_.battery_supported) {
         return;
+    }
+    if (device_ui_state_.battery_supported) {
+        auto state_connection = DeviceHelper::subscribe_event(
+                                    DeviceHelper::EventId::PowerBatteryStateChanged,
+                                    [this](const std::string &, const boost::json::object &data) {
+            if (context_ == nullptr || !BROOKESIA_DESCRIBE_FROM_JSON(data, device_ui_state_.battery_state)) {
+                return;
+            }
+            (void)refresh_battery_state(*context_);
+        });
+        if (state_connection.connected()) {
+            device_event_connections_.push_back(std::move(state_connection));
+        }
+        auto config_connection = DeviceHelper::subscribe_event(
+                                     DeviceHelper::EventId::PowerBatteryChargeConfigChanged,
+                                     [this](const std::string &, const boost::json::object &data) {
+            if (context_ == nullptr || !BROOKESIA_DESCRIBE_FROM_JSON(data, device_ui_state_.battery_charge_config)) {
+                return;
+            }
+            (void)refresh_battery_state(*context_);
+        });
+        if (config_connection.connected()) {
+            device_event_connections_.push_back(std::move(config_connection));
+        }
     }
 
     if (device_ui_state_.display_backlight_supported) {
@@ -492,6 +585,45 @@ void SettingsApp::handle_mute_event(const gui::Event &event)
         return;
     }
     set_mute(*context_, *checked);
+}
+
+void SettingsApp::handle_battery_charging_event(const gui::Event &event)
+{
+    if (context_ == nullptr || !device_ui_state_.battery_charger_control_supported) {
+        return;
+    }
+    auto checked = event.get_bool("checked");
+    if (!checked) {
+        return;
+    }
+    auto result = DeviceHelper::call_function_sync(
+                      DeviceHelper::FunctionId::SetPowerBatteryChargingEnabled, *checked,
+                      service::helper::Timeout(DEVICE_SERVICE_TIMEOUT_MS));
+    if (!result) {
+        BROOKESIA_LOGW("Failed to set battery charging state: %1%", result.error());
+    } else {
+        device_ui_state_.battery_charge_config.enabled = *checked;
+        (void)refresh_battery_state(*context_);
+    }
+}
+
+void SettingsApp::handle_battery_rate_event(const gui::Event &)
+{
+    if (context_ == nullptr || !device_ui_state_.battery_charge_config_supported) {
+        return;
+    }
+    auto config = device_ui_state_.battery_charge_config;
+    config.charge_current_ma = config.charge_current_ma >= 1000 ? 500 : 1000;
+    auto result = DeviceHelper::call_function_sync(
+                      DeviceHelper::FunctionId::SetPowerBatteryChargeConfig,
+                      BROOKESIA_DESCRIBE_TO_JSON(config).as_object(),
+                      service::helper::Timeout(DEVICE_SERVICE_TIMEOUT_MS));
+    if (!result) {
+        BROOKESIA_LOGW("Failed to set battery charge rate: %1%", result.error());
+    } else {
+        device_ui_state_.battery_charge_config = config;
+        (void)refresh_battery_state(*context_);
+    }
 }
 
 void SettingsApp::set_brightness(system::core::AppContext &context, int brightness)

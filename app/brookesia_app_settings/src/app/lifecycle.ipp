@@ -557,6 +557,11 @@ std::expected<void, std::string> SettingsApp::on_action(
                 BROOKESIA_LOGW("Failed to refresh My Device page: %1%", device_result.error());
             }
         }
+        if (current_page_ == PAGE_BATTERY) {
+            if (auto battery_result = refresh_battery_state(context); !battery_result) {
+                BROOKESIA_LOGW("Failed to refresh Battery page: %1%", battery_result.error());
+            }
+        }
         if (current_page_ == PAGE_LANGUAGE) {
             if (auto language_result = populate_language_options(context); !language_result) {
                 BROOKESIA_LOGW("Failed to populate Language page: %1%", language_result.error());
@@ -674,6 +679,14 @@ std::expected<void, std::string> SettingsApp::subscribe_actions(system::core::Ap
         .handler = [this](const gui::Event & event) {
             handle_mute_event(event);
         },
+    });
+    subscriptions.push_back({
+        .action = ACTION_BATTERY_CHARGING,
+        .handler = [this](const gui::Event &event) { handle_battery_charging_event(event); },
+    });
+    subscriptions.push_back({
+        .action = ACTION_BATTERY_RATE,
+        .handler = [this](const gui::Event &event) { handle_battery_rate_event(event); },
     });
     for (const auto *action : {
                 ACTION_DEBUG_MEMORY_TOGGLE,

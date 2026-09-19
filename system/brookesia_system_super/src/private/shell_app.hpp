@@ -156,6 +156,12 @@ private:
     void release_wifi_service_binding();
     void refresh_wifi_status();
     void set_status_wifi_state(bool visible, bool connected);
+    bool ensure_device_service_binding();
+    void release_device_service_binding();
+    void refresh_battery_status();
+    void set_status_battery_state(
+        const std::optional<uint8_t> &percentage, const std::optional<int32_t> &current_ma
+    );
     bool ensure_sntp_service_binding();
     void release_sntp_service_binding();
     void subscribe_sntp_events();
@@ -184,9 +190,11 @@ private:
     std::shared_ptr<service::dataflow::VisualOperation> display_operation_;
     service::ServiceBinding display_service_binding_;
     service::ServiceBinding wifi_service_binding_;
+    service::ServiceBinding device_service_binding_;
     service::ServiceBinding sntp_service_binding_;
     std::vector<lib_utils::connection> display_gesture_connections_;
     service::EventRegistry::SignalConnection wifi_event_connection_;
+    service::EventRegistry::SignalConnection battery_event_connection_;
     service::EventRegistry::SignalConnection sntp_event_connection_;
     bool background_mounted_ = false;
     bool overlay_mounted_ = false;
