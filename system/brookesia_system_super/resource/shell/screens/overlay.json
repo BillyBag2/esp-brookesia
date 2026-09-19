@@ -93,6 +93,36 @@
                     "children": [
                         {
                             "type": "container",
+                            "id": "battery_pill",
+                            "commonProps": { "hidden": true },
+                            "bindings": {
+                                "commonProps.hidden": "battery_hidden",
+                                "style.bgColor": "battery_background"
+                            },
+                            "layout": { "type": "flex", "mainAlign": "center", "crossAlign": "center" },
+                            "placement": {
+                                "mode": "flow",
+                                "width": "${constant.ui.overlay.metric.statusPillWidth}",
+                                "height": "${constant.ui.overlay.metric.statusPillHeight}"
+                            },
+                            "children": [
+                                {
+                                    "type": "label",
+                                    "id": "label",
+                                    "bindings": {
+                                        "labelProps.text": "battery_text",
+                                        "style.textColor": "battery_foreground"
+                                    },
+                                    "labelProps": { "text": "--" },
+                                    "style": { "fontSize": "${constant.ui.overlay.metric.statusPillFont}" },
+                                    "placement": { "mode": "flow" },
+                                    "styleRefs": ["shell.pillText"]
+                                }
+                            ],
+                            "styleRefs": ["shell.statusPill"]
+                        },
+                        {
+                            "type": "container",
                             "id": "wifi_pill",
                             "commonProps": {
                                 "hidden": true

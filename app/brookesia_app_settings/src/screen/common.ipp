@@ -17,7 +17,7 @@ std::expected<void, std::string> SettingsApp::refresh_header(system::core::AppCo
         updates,
         HEADER_TITLE_PATH,
         "labelProps.text",
-        localized_text(current_locale_, current_page_)
+        current_page_ == PAGE_BATTERY ? "Battery" : localized_text(current_locale_, current_page_)
     );
     return context.gui().set_binding_values(updates);
 }

@@ -109,7 +109,7 @@ int64_t elapsed_ms_since(SteadyTimePoint started_at, SteadyTimePoint ended_at = 
 
 void log_start_profile(const char *stage, SteadyTimePoint stage_started_at, SteadyTimePoint total_started_at)
 {
-    const auto now = SteadyClock::now();
+    [[maybe_unused]] const auto now = SteadyClock::now();
     APP_SETTINGS_PROFILE_LOGI(
         "Settings start profile: stage(%1%), elapsed_ms(%2%), total_ms(%3%)",
         stage,
@@ -142,6 +142,7 @@ static constexpr const char *THEME_LIGHT = "light";
 static constexpr const char *THEME_DARK = "dark";
 static constexpr const char *PAGE_HOME = "settings_home";
 static constexpr const char *PAGE_DEVICE = "my_device";
+static constexpr const char *PAGE_BATTERY = "battery";
 static constexpr const char *PAGE_WIFI = "wifi";
 static constexpr const char *PAGE_WIFI_CONNECT = "wifi_connect";
 static constexpr const char *PAGE_SOUND = "sound";
@@ -151,6 +152,8 @@ static constexpr const char *PAGE_LANGUAGE = "language";
 static constexpr const char *PAGE_TIME_ZONE = "time_zone";
 static constexpr const char *PAGE_DEBUG = "debug";
 static constexpr const char *ACTION_OPEN_HOME = "settings.open.home";
+static constexpr const char *ACTION_OPEN_BATTERY = "settings.open.battery";
+static constexpr const char *ACTION_BACK_BATTERY = "settings.back.battery";
 static constexpr const char *ACTION_HEADER_BACK = "settings.header.back";
 static constexpr const char *ACTION_BACK_LANGUAGE = "settings.back.language";
 static constexpr const char *ACTION_OPEN_DEBUG = "settings.open.debug";
@@ -164,6 +167,8 @@ static constexpr const char *ACTION_WIFI_CONNECT_SUBMIT = "settings.wifi.connect
 static constexpr const char *ACTION_DISPLAY_BRIGHTNESS = "settings.display.brightness";
 static constexpr const char *ACTION_SOUND_VOLUME = "settings.sound.volume";
 static constexpr const char *ACTION_SOUND_MUTE = "settings.sound.mute";
+static constexpr const char *ACTION_BATTERY_CHARGING = "settings.battery.charging";
+static constexpr const char *ACTION_BATTERY_RATE = "settings.battery.rate";
 static constexpr const char *ACTION_DEBUG_MEMORY_TOGGLE = "settings.debug.memory.toggle";
 static constexpr const char *ACTION_DEBUG_THREAD_TOGGLE = "settings.debug.thread.toggle";
 static constexpr const char *ACTION_DEBUG_GUI_TOGGLE = "settings.debug.gui.toggle";
@@ -299,9 +304,10 @@ static constexpr const char *DEBUG_KEY_THREAD_STACK_HIGH_WATER_MARK_THRESHOLD_BY
     "Debug.ThreadStackHighWaterMarkThresholdBytes";
 static constexpr uint32_t SETTINGS_STORAGE_TIMEOUT_MS = WIFI_SERVICE_TIMEOUT_MS;
 
-static constexpr std::array<const char *, 18> NAVIGATION_ACTIONS = {
+static constexpr std::array<const char *, 20> NAVIGATION_ACTIONS = {
     ACTION_OPEN_HOME,
     "settings.back.device",
+    ACTION_BACK_BATTERY,
     "settings.back.wifi",
     ACTION_BACK_WIFI_CONNECT,
     "settings.back.sound",
@@ -310,6 +316,7 @@ static constexpr std::array<const char *, 18> NAVIGATION_ACTIONS = {
     "settings.back.time_zone",
     ACTION_BACK_DEBUG,
     "settings.open.device",
+    ACTION_OPEN_BATTERY,
     "settings.open.wifi",
     ACTION_OPEN_WIFI_CONNECT,
     "settings.open.sound",
@@ -357,15 +364,21 @@ std::vector<std::string> make_default_action_subscriptions()
         WIFI_AVAILABLE_NEXT_ACTION,
         ACTION_HEADER_BACK,
     };
+    static constexpr std::array<const char *, 2> BATTERY_ACTIONS = {
+        ACTION_BATTERY_CHARGING,
+        ACTION_BATTERY_RATE,
+    };
 
     std::vector<std::string> actions;
     actions.reserve(
-        NAVIGATION_ACTIONS.size() + THEME_ACTIONS.size() + TIME_ZONE_ACTIONS.size() + WIFI_ACTIONS.size()
+        NAVIGATION_ACTIONS.size() + THEME_ACTIONS.size() + TIME_ZONE_ACTIONS.size() + WIFI_ACTIONS.size() +
+        BATTERY_ACTIONS.size()
     );
     append_action_subscriptions(actions, NAVIGATION_ACTIONS);
     append_action_subscriptions(actions, THEME_ACTIONS);
     append_action_subscriptions(actions, TIME_ZONE_ACTIONS);
     append_action_subscriptions(actions, WIFI_ACTIONS);
+    append_action_subscriptions(actions, BATTERY_ACTIONS);
     return actions;
 }
 
@@ -463,9 +476,10 @@ std::string make_app_version()
            std::to_string(BROOKESIA_APP_SETTINGS_VER_PATCH);
 }
 
-static constexpr std::array<NavigationTarget, 18> NAVIGATION_TARGETS = {
+static constexpr std::array<NavigationTarget, 20> NAVIGATION_TARGETS = {
     NavigationTarget{ACTION_OPEN_HOME, PAGE_HOME},
     NavigationTarget{"settings.back.device", PAGE_HOME},
+    NavigationTarget{ACTION_BACK_BATTERY, PAGE_HOME},
     NavigationTarget{"settings.back.wifi", PAGE_HOME},
     NavigationTarget{ACTION_BACK_WIFI_CONNECT, PAGE_WIFI},
     NavigationTarget{"settings.back.sound", PAGE_HOME},
@@ -474,6 +488,7 @@ static constexpr std::array<NavigationTarget, 18> NAVIGATION_TARGETS = {
     NavigationTarget{"settings.back.time_zone", PAGE_MORE},
     NavigationTarget{ACTION_BACK_DEBUG, PAGE_DEVICE},
     NavigationTarget{"settings.open.device", PAGE_DEVICE},
+    NavigationTarget{ACTION_OPEN_BATTERY, PAGE_BATTERY},
     NavigationTarget{"settings.open.wifi", PAGE_WIFI},
     NavigationTarget{ACTION_OPEN_WIFI_CONNECT, PAGE_WIFI_CONNECT},
     NavigationTarget{"settings.open.sound", PAGE_SOUND},
@@ -688,6 +703,9 @@ std::string_view get_header_back_action_for_page(std::string_view page)
     }
     if (page == PAGE_DEVICE) {
         return "settings.back.device";
+    }
+    if (page == PAGE_BATTERY) {
+        return ACTION_BACK_BATTERY;
     }
     if (page == PAGE_WIFI) {
         return "settings.back.wifi";

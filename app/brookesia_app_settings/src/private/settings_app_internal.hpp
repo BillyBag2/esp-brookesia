@@ -152,6 +152,7 @@ inline constexpr const char *THEME_LIGHT = "light";
 inline constexpr const char *THEME_DARK = "dark";
 inline constexpr const char *PAGE_HOME = "settings_home";
 inline constexpr const char *PAGE_DEVICE = "my_device";
+inline constexpr const char *PAGE_BATTERY = "battery";
 inline constexpr const char *PAGE_WIFI = "wifi";
 inline constexpr const char *PAGE_WIFI_CONNECT = "wifi_connect";
 inline constexpr const char *PAGE_SOUND = "sound";
@@ -161,6 +162,8 @@ inline constexpr const char *PAGE_LANGUAGE = "language";
 inline constexpr const char *PAGE_TIME_ZONE = "time_zone";
 inline constexpr const char *PAGE_DEBUG = "debug";
 inline constexpr const char *ACTION_OPEN_HOME = "settings.open.home";
+inline constexpr const char *ACTION_OPEN_BATTERY = "settings.open.battery";
+inline constexpr const char *ACTION_BACK_BATTERY = "settings.back.battery";
 inline constexpr const char *ACTION_HEADER_BACK = "settings.header.back";
 inline constexpr const char *ACTION_BACK_LANGUAGE = "settings.back.language";
 inline constexpr const char *ACTION_OPEN_DEBUG = "settings.open.debug";
@@ -174,6 +177,8 @@ inline constexpr const char *ACTION_WIFI_CONNECT_SUBMIT = "settings.wifi.connect
 inline constexpr const char *ACTION_DISPLAY_BRIGHTNESS = "settings.display.brightness";
 inline constexpr const char *ACTION_SOUND_VOLUME = "settings.sound.volume";
 inline constexpr const char *ACTION_SOUND_MUTE = "settings.sound.mute";
+inline constexpr const char *ACTION_BATTERY_CHARGING = "settings.battery.charging";
+inline constexpr const char *ACTION_BATTERY_RATE = "settings.battery.rate";
 inline constexpr const char *ACTION_DEBUG_MEMORY_TOGGLE = "settings.debug.memory.toggle";
 inline constexpr const char *ACTION_DEBUG_THREAD_TOGGLE = "settings.debug.thread.toggle";
 inline constexpr const char *ACTION_DEBUG_GUI_TOGGLE = "settings.debug.gui.toggle";
@@ -229,6 +234,13 @@ inline constexpr const char *SOUND_VOLUME_SLIDER_PATH = "/sound/page/volume_card
 inline constexpr const char *SOUND_MUTE_ROW_PATH = "/sound/page/silent_card/silent_mode";
 inline constexpr const char *SOUND_MUTE_TOGGLE_PATH = "/sound/page/silent_card/silent_mode/toggle";
 inline constexpr const char *HOME_SOUND_VALUE_PATH = "/settings_home/page/main_list/sound/value_box/value";
+inline constexpr const char *BATTERY_CARD_PATH = "/battery/page/battery_card";
+inline constexpr const char *BATTERY_LEVEL_PATH = "/battery/page/battery_card/level/value_box/value";
+inline constexpr const char *BATTERY_VOLTAGE_PATH = "/battery/page/battery_card/voltage/value_box/value";
+inline constexpr const char *BATTERY_CURRENT_PATH = "/battery/page/battery_card/current/value_box/value";
+inline constexpr const char *BATTERY_CHARGING_PATH = "/battery/page/battery_card/charging/toggle";
+inline constexpr const char *BATTERY_RATE_PATH = "/battery/page/battery_card/rate/value_box/value";
+inline constexpr const char *HOME_BATTERY_VALUE_PATH = "/settings_home/page/main_list/battery/value_box/value";
 inline constexpr const char *DEBUG_MEMORY_SWITCH_PATH = "/debug/page/switch_card/memory_debug/toggle";
 inline constexpr const char *DEBUG_THREAD_SWITCH_ROW_PATH = "/debug/page/switch_card/thread_debug";
 inline constexpr const char *DEBUG_THREAD_SWITCH_PATH = "/debug/page/switch_card/thread_debug/toggle";
@@ -309,9 +321,10 @@ inline constexpr const char *DEBUG_KEY_THREAD_STACK_HIGH_WATER_MARK_THRESHOLD_BY
     "Debug.ThreadStackHighWaterMarkThresholdBytes";
 inline constexpr uint32_t SETTINGS_STORAGE_TIMEOUT_MS = WIFI_SERVICE_TIMEOUT_MS;
 
-inline constexpr std::array<const char *, 18> NAVIGATION_ACTIONS = {
+inline constexpr std::array<const char *, 20> NAVIGATION_ACTIONS = {
     ACTION_OPEN_HOME,
     "settings.back.device",
+    ACTION_BACK_BATTERY,
     "settings.back.wifi",
     ACTION_BACK_WIFI_CONNECT,
     "settings.back.sound",
@@ -320,6 +333,7 @@ inline constexpr std::array<const char *, 18> NAVIGATION_ACTIONS = {
     "settings.back.time_zone",
     ACTION_BACK_DEBUG,
     "settings.open.device",
+    ACTION_OPEN_BATTERY,
     "settings.open.wifi",
     ACTION_OPEN_WIFI_CONNECT,
     "settings.open.sound",

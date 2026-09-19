@@ -33,6 +33,7 @@ public:
      */
     enum class Ability {
         Voltage,        ///< Battery voltage reading.
+        Current,        ///< Signed battery current reading.
         Percentage,     ///< Battery level percentage.
         PowerSource,    ///< Battery/external power source state.
         ChargeState,    ///< Charger state.
@@ -104,6 +105,7 @@ public:
         ChargeState charge_state = ChargeState::Unknown; ///< Current charge state.
         LevelSource level_source = LevelSource::Unknown; ///< Battery percentage source.
         std::optional<uint32_t> voltage_mv = std::nullopt; ///< Battery voltage in mV.
+        std::optional<int32_t> current_ma = std::nullopt;   ///< Battery current in mA; positive charges the battery.
         std::optional<uint8_t> percentage = std::nullopt;  ///< Battery percentage in [0, 100].
         std::optional<uint32_t> vbus_voltage_mv = std::nullopt;   ///< VBUS voltage in mV.
         std::optional<uint32_t> system_voltage_mv = std::nullopt; ///< System voltage in mV.
@@ -185,7 +187,7 @@ private:
 };
 
 BROOKESIA_DESCRIBE_ENUM(
-    BatteryIface::Ability, Voltage, Percentage, PowerSource, ChargeState, VbusVoltage, SystemVoltage, ChargerControl,
+    BatteryIface::Ability, Voltage, Current, Percentage, PowerSource, ChargeState, VbusVoltage, SystemVoltage, ChargerControl,
     ChargeConfig
 );
 BROOKESIA_DESCRIBE_ENUM(BatteryIface::PowerSource, Unknown, Battery, External);
@@ -198,7 +200,7 @@ BROOKESIA_DESCRIBE_STRUCT(BatteryIface::Info, (), (name, chemistry, abilities));
 BROOKESIA_DESCRIBE_STRUCT(
     BatteryIface::State, (),
     (
-        is_present, power_source, charge_state, level_source, voltage_mv, percentage, vbus_voltage_mv,
+        is_present, power_source, charge_state, level_source, voltage_mv, current_ma, percentage, vbus_voltage_mv,
         system_voltage_mv, is_low, is_critical
     )
 );

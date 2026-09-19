@@ -55,6 +55,7 @@ std::expected<void, std::string> ShellApp::mount_overlay(core::AppContext &conte
     refresh_status_clock();
     schedule_status_clock_timer();
     refresh_wifi_status();
+    refresh_battery_status();
     subscribe_sntp_events();
     (void)configure_display_gesture();
     apply_debug_config(get_debug_config_snapshot());
@@ -69,6 +70,7 @@ void ShellApp::unmount_overlay()
     release_display_service_binding();
     release_sntp_service_binding();
     release_wifi_service_binding();
+    release_device_service_binding();
     cancel_gesture_exit_hold_timer();
     cancel_status_peek_auto_hide_timer();
     stop_status_clock_timer();
